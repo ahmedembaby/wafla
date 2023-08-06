@@ -1,4 +1,4 @@
-const { Client, MessageMedia, LocalAuth } = require('whatsapp-web.js');
+const { Client, GroupChat, MessageMedia, LocalAuth } = require('whatsapp-web.js');
 const express = require('express');
 const socketIO = require('socket.io');
 const qrcode = require('qrcode');
@@ -18,6 +18,8 @@ app.use(express.urlencoded({
   extended: true
 }));
 
+
+
 /**
  * BASED ON MANY QUESTIONS
  * Actually ready mentioned on the tutorials
@@ -31,7 +33,7 @@ app.use(fileUpload({
 }));
 
 app.get('/', (req, res) => {
-  res.sendFile('index-multiple-account.html', {
+  res.sendFile('index.html', {
     root: __dirname
   });
 });
@@ -195,7 +197,7 @@ app.post('/send-message', async (req, res) => {
   const number = phoneNumberFormatter(req.body.number);
   const message = req.body.message;
 
-  const client = sessions.find(sess => sess.id == sender)?.client;
+  const client = sessions.find(sess => sess.id == sender).client;
 
   // Make sure the sender is exists & ready
   if (!client) {
@@ -233,6 +235,100 @@ app.post('/send-message', async (req, res) => {
     });
   });
 });
+
+// Filter Numbers
+app.post('/chknumber', async (req, res) => {
+  console.log(req);
+
+  const sender = req.body.sender;
+  const number = phoneNumberFormatter(req.body.number);
+
+  const client = sessions.find(sess => sess.id == sender).client;
+
+  // Make sure the sender is exists & ready
+  if (!client) {
+    return res.status(422).json({
+      status: false,
+      message: `The sender: ${sender} is not found!`
+    })
+  }
+
+
+  const isRegisteredNumber = await client.isRegisteredUser(number);
+
+  if (!isRegisteredNumber) {
+    return res.status(422).json({
+      status: false,
+      message: 'The number is not registered'
+    });
+  } else{
+          return res.status(200).json({
+      status: true,
+      message: 'The number is Found'
+    });
+  }
+
+});
+// get
+app.get('/get', (req, res) => {
+    const SESSIONS_FILE = './whatsapp-sessions.json';
+const getSessionsFile = function() {
+  
+}
+    res.send(JSON.parse(fs.readFileSync(SESSIONS_FILE)))
+});
+
+//get my contacts
+app.post('/mycont', async (req, res) => {
+     console.log(req);
+     const sender = req.body.sender;
+       const client = sessions.find(sess => sess.id == sender).client;
+         // Make sure the sender is exists & ready
+  if (!client) {
+    return res.status(422).json({
+      status: false,
+      message: `The sender: ${sender} is not found!`
+    })
+  }
+ const mychats = await client.getContacts();
+ res.send(mychats)
+});
+
+//get my groups
+app.post('/mygr', async (req, res) => {
+     console.log(req);
+     const sender = req.body.sender;
+       const client = sessions.find(sess => sess.id == sender).client;
+         // Make sure the sender is exists & ready
+  if (!client) {
+    return res.status(422).json({
+      status: false,
+      message: `The sender: ${sender} is not found!`
+    })
+  }
+ const mychats = await client.getChats();
+ res.send(mychats)
+
+});
+
+//get group members
+app.post('/grme', async (req, res) => {
+          console.log(req);
+     const sender = req.body.sender;
+const hash = req.body.hash;
+       const client = sessions.find(sess => sess.id == sender).client;
+         // Make sure the sender is exists & ready
+  if (!client) {
+    return res.status(422).json({
+      status: false,
+      message: `The sender: ${sender} is not found!`
+    })
+  }
+ const mychats = await client.getChatById(hash);
+ res.send(mychats)
+
+});
+
 
 server.listen(port, function() {
   console.log('App running on *: ' + port);
